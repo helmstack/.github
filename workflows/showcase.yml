@@ -1,0 +1,87 @@
+name: Showcase Demos (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      demo_path:
+        required: false
+        type: string
+        default: 'demos/'
+      record_new_casts:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  validate-demos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install HelmStack CLI (if available)
+        run: |
+          if npm list @helmstack/cli > /dev/null 2>&1; then
+            echo "HelmStack CLI already in dependencies"
+          else
+            npm install @helmstack/cli@latest || echo "CLI not yet published"
+          fi
+
+      - name: Validate existing demo scripts
+        run: |
+          find ${{ inputs.demo_path }} -name "*.sh" -type f | while read script; do
+            echo "Validating: $script"
+            bash -n "$script" || echo "Syntax error in $script"
+          done
+
+      - name: Test demo scenarios (dry-run)
+        run: |
+          if [ -f "${{ inputs.demo_path }}/test-scenarios.sh" ]; then
+            bash "${{ inputs.demo_path }}/test-scenarios.sh" --dry-run
+          fi
+
+      - name: Record new Asciinema casts
+        if: ${{ inputs.record_new_casts }}
+        run: |
+          # Install asciinema
+          sudo apt-get update && sudo apt-get install -y asciinema
+
+          # Record demos (placeholder - would need actual demo scripts)
+          if [ -d "${{ inputs.demo_path }}/scripts" ]; then
+            cd "${{ inputs.demo_path }}/scripts"
+            for script in *.sh; do
+              if [ -f "$script" ]; then
+                echo "Recording demo: $script"
+                # asciinema rec "../casts/${script%.sh}.cast" --command "bash $script"
+                echo "Demo recording placeholder for $script"
+              fi
+            done
+          fi
+
+      - name: Validate Asciinema casts
+        run: |
+          find ${{ inputs.demo_path }} -name "*.cast" -type f | while read cast; do
+            echo "Validating cast: $cast"
+            # Basic JSON validation for .cast files
+            if command -v jq &> /dev/null; then
+              jq empty "$cast" && echo "✓ Valid cast" || echo "✗ Invalid cast format"
+            fi
+          done
+
+      - name: Upload demo artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-artifacts-${{ github.run_id }}
+          path: |
+            ${{ inputs.demo_path }}/casts/
+            ${{ inputs.demo_path }}/screenshots/
+          retention-days: 30

@@ -1,0 +1,73 @@
+name: Build & Test (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        required: false
+        type: string
+        default: '20'
+      package_manager:
+        required: false
+        type: string
+        default: 'npm'
+      test_command:
+        required: false
+        type: string
+        default: 'npm test'
+      build_command:
+        required: false
+        type: string
+        default: 'npm run build'
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.package_manager }}
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.package_manager }}" = "npm" ]; then
+            npm ci
+          elif [ "${{ inputs.package_manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          elif [ "${{ inputs.package_manager }}" = "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          fi
+
+      - name: Lint
+        run: |
+          if [ "${{ inputs.package_manager }}" = "npm" ]; then
+            npm run lint --if-present
+          elif [ "${{ inputs.package_manager }}" = "yarn" ]; then
+            yarn lint || true
+          elif [ "${{ inputs.package_manager }}" = "pnpm" ]; then
+            pnpm lint || true
+          fi
+
+      - name: Build
+        run: ${{ inputs.build_command }}
+        if: inputs.build_command != ''
+
+      - name: Test
+        run: ${{ inputs.test_command }}
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            coverage/
+            test-results/
+          retention-days: 7

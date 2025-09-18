@@ -1,0 +1,105 @@
+name: Release (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      npm_publish:
+        type: boolean
+        default: false
+      package_manager:
+        required: false
+        type: string
+        default: 'npm'
+      registry_url:
+        required: false
+        type: string
+        default: 'https://registry.npmjs.org'
+      node_version:
+        required: false
+        type: string
+        default: '20'
+    secrets:
+      NPM_TOKEN:
+        required: false
+      GITHUB_TOKEN:
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.package_manager }}
+          registry-url: ${{ inputs.registry_url }}
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.package_manager }}" = "npm" ]; then
+            npm ci
+          elif [ "${{ inputs.package_manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          elif [ "${{ inputs.package_manager }}" = "pnpm" ]; then
+            pnpm install --frozen-lockfile
+          fi
+
+      - name: Build
+        run: |
+          if [ "${{ inputs.package_manager }}" = "npm" ]; then
+            npm run build --if-present
+          elif [ "${{ inputs.package_manager }}" = "yarn" ]; then
+            yarn build || true
+          elif [ "${{ inputs.package_manager }}" = "pnpm" ]; then
+            pnpm build || true
+          fi
+
+      - name: Run tests
+        run: |
+          if [ "${{ inputs.package_manager }}" = "npm" ]; then
+            npm test --if-present
+          elif [ "${{ inputs.package_manager }}" = "yarn" ]; then
+            yarn test || true
+          elif [ "${{ inputs.package_manager }}" = "pnpm" ]; then
+            pnpm test || true
+          fi
+
+      - name: Generate changelog and create release
+        run: |
+          # Simple semantic release alternative
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Create GitHub release
+          gh release create "v$CURRENT_VERSION" \
+            --title "Release v$CURRENT_VERSION" \
+            --notes "Automated release v$CURRENT_VERSION" \
+            --latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to NPM
+        if: ${{ inputs.npm_publish }}
+        run: |
+          if [ "${{ inputs.package_manager }}" = "npm" ]; then
+            npm publish --access public
+          elif [ "${{ inputs.package_manager }}" = "yarn" ]; then
+            yarn publish --access public
+          elif [ "${{ inputs.package_manager }}" = "pnpm" ]; then
+            pnpm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

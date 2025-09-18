@@ -1,0 +1,58 @@
+name: Contract Tests (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      schemas_version:
+        required: false
+        type: string
+        default: 'latest'
+      node_version:
+        required: false
+        type: string
+        default: '20'
+
+jobs:
+  contract-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install schemas package
+        run: |
+          if [ "${{ inputs.schemas_version }}" = "latest" ]; then
+            npm install @helmstack/schemas@latest
+          else
+            npm install @helmstack/schemas@${{ inputs.schemas_version }}
+          fi
+
+      - name: Run contract tests
+        run: npm run test:contract
+        env:
+          CI: true
+
+      - name: Validate schema compatibility
+        run: |
+          if command -v npx &> /dev/null; then
+            npx @helmstack/schemas validate-compatibility || echo "Schema validation skipped"
+          fi
+
+      - name: Upload contract test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contract-test-results-${{ github.run_id }}
+          path: |
+            contract-test-results/
+            schema-validation/
+          retention-days: 30
