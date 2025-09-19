@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/helmstack/helmstack-cli/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📚 Documentation
+    url: https://github.com/helmstack/.github/blob/main/PROJECT_VISION.md
+    about: Read the project vision and documentation
+  - name: 🚀 Quick Start
+    url: https://github.com/helmstack/.github/blob/main/ONE-LINER-INSTALL.md
+    about: Get started with HelmStack installation
