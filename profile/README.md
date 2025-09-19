@@ -9,13 +9,13 @@ Contract-first CLI that transforms how you build, test, and deploy applications 
 ## ⚡ Quick Start
 
 ```bash
-# Create new project (no pre-install needed!)
-npx create-helmstack-app my-project
-cd my-project && npm install && npm start
-
-# Or install CLI globally first
+# Install HelmStack CLI globally
 npm install -g @helmstack/cli
+heck --version
+
+# Create new project
 npx create-helmstack-app my-project
+cd my-project && npm install && npm start  # Starts the generated project
 
 # Or use our interactive installer
 curl -fsSL https://raw.githubusercontent.com/helmstack/.github/main/install.sh | bash
@@ -151,6 +151,7 @@ heck agent run        # Execute multi-step workflows
 ```bash
 npm install -g @helmstack/cli
 heck --version
+heck init  # Initialize in existing project
 ```
 
 ### 🚀 Interactive Installer
@@ -161,7 +162,7 @@ curl -fsSL https://raw.githubusercontent.com/helmstack/.github/main/install.sh |
 ### 🎯 Create New Project
 ```bash
 npx create-helmstack-app my-project
-cd my-project && npm install && npm start
+cd my-project && npm install && npm start  # Starts your generated app
 ```
 
 ### 🐳 Docker
